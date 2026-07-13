@@ -1,0 +1,35 @@
+﻿<Window x:Class="ReceitasAtelie.Views.CadastroCategoriaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ReceitasAtelie.Views"
+        mc:Ignorable="d"
+        Title="Nova Categoria" Height="250" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#FF3B143A">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Nome da Categoria -->
+        <TextBlock Text="Nome do Menu/Categoria:" Foreground="White" FontSize="14" Margin="0,0,0,5" Grid.Row="0"/>
+        <TextBox x:Name="TxtNome" Padding="5" Margin="0,0,0,15" Grid.Row="1" FontSize="14"/>
+
+        <!-- Escolha do Pai (Opcional) -->
+        <TextBlock Text="Vincular como subcategoria de (Opcional):" Foreground="White" FontSize="14" Margin="0,0,0,5" Grid.Row="2"/>
+        <ComboBox x:Name="CboCategoriasPai" DisplayMemberPath="Nome" SelectedValuePath="Id" Padding="5" Grid.Row="3" VerticalAlignment="Top" FontSize="14"/>
+
+        <!-- Botões de Ação -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="3" VerticalAlignment="Bottom">
+            <Button Content="Cancelar" Click="BtnCancelar_Click" Width="80" Margin="0,0,10,0" Padding="5" Background="Gray" Foreground="White" BorderThickness="0"/>
+            <Button Content="Salvar" Click="BtnSalvar_Click" Width="80" Padding="5" Background="#FFD47FA6" Foreground="White" FontWeight="Bold" BorderThickness="0"/>
+        </StackPanel>
+    </Grid>
+</Window>

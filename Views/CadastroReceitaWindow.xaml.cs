@@ -14,51 +14,21 @@ namespace ReceitasAtelie.Views
     {
         private MainViewModel _viewModel;
 
-        // Classe auxiliar para preencher a paleta de cores visual
-        public class CorPaleta
-        {
-            public string Nome { get; set; } = string.Empty;
-            public Brush Valor { get; set; } = Brushes.Black;
-        }
-
         public CadastroReceitaWindow(MainViewModel viewModel)
         {
             InitializeComponent();
             _viewModel = viewModel;
 
-            // 1. Configurar as Fontes e selecionar a padrão (Segoe UI ou Arial)
+            // 1. Configurar as Fontes e selecionar a padrão (Segoe UI)
             CboFontes.SelectedItem = new FontFamily("Segoe UI");
 
             // 2. Configurar o Tamanho de Fonte padrão
             CboTamanhoFonte.SelectedItem = 14.0;
 
-            // 3. Inicializar a Paleta de Cores com opções elegantes
-            InicializarPaletaCores();
-
-            // 4. Carrega as categorias na ComboBox
+            // 3. Carrega as categorias na ComboBox de forma plana
             var listaPlana = new List<object>();
             ObterCategoriasLineares(viewModel.CategoriasRaiz, listaPlana);
             CboCategorias.ItemsSource = listaPlana;
-        }
-
-        private void InicializarPaletaCores()
-        {
-            var cores = new List<CorPaleta>
-            {
-                new CorPaleta { Nome = "Preto", Valor = Brushes.Black },
-                new CorPaleta { Nome = "Cinza Escuro", Valor = Brushes.DimGray },
-                new CorPaleta { Nome = "Rosa Ateliê", Valor = (Brush)new BrushConverter().ConvertFromString("#FFD47FA6")! },
-                new CorPaleta { Nome = "Roxo Escuro", Valor = (Brush)new BrushConverter().ConvertFromString("#FF3B143A")! },
-                new CorPaleta { Nome = "Vermelho", Valor = Brushes.Crimson },
-                new CorPaleta { Nome = "Laranja", Valor = Brushes.DarkOrange },
-                new CorPaleta { Nome = "Ouro", Valor = Brushes.Goldenrod },
-                new CorPaleta { Nome = "Verde Floresta", Valor = Brushes.ForestGreen },
-                new CorPaleta { Nome = "Azul Real", Valor = Brushes.RoyalBlue },
-                new CorPaleta { Nome = "Marrom", Valor = Brushes.SaddleBrown }
-            };
-
-            CboCorTexto.ItemsSource = cores;
-            CboCorTexto.SelectedIndex = 0; // Inicia no Preto
         }
 
         private void ObterCategoriasLineares(System.Collections.IEnumerable index, List<object> lista)
@@ -103,11 +73,14 @@ namespace ReceitasAtelie.Views
             RtbTextoReceita.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, tamanho);
         }
 
-        private void CboCorTexto_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        // Método acionado quando a cor selecionada no ColorPicker é alterada
+        private void CpTexto_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
         {
-            if (RtbTextoReceita == null || CboCorTexto.SelectedItem == null) return;
-            CorPaleta corSelecionada = (CorPaleta)CboCorTexto.SelectedItem;
-            RtbTextoReceita.Selection.ApplyPropertyValue(TextElement.ForegroundProperty, corSelecionada.Valor);
+            if (RtbTextoReceita == null || !e.NewValue.HasValue) return;
+
+            // Cria um SolidColorBrush com a cor escolhida pelo usuário no ColorPicker
+            SolidColorBrush corBrush = new SolidColorBrush(e.NewValue.Value);
+            RtbTextoReceita.Selection.ApplyPropertyValue(TextElement.ForegroundProperty, corBrush);
         }
 
         // --- BUSCA DE ANEXOS ---

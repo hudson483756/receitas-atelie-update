@@ -1,6 +1,7 @@
 ﻿<Window x:Class="ReceitasAtelie.Views.CadastroReceitaWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         Title="Cadastrar Nova Receita" 
         Height="700" Width="900"
         WindowStartupLocation="CenterOwner"
@@ -91,19 +92,19 @@
 
             <Separator Margin="5,0"/>
 
-            <!-- Paleta de Cores Visual -->
-            <TextBlock Text=" Cor: " VerticalAlignment="Center" FontSize="11" Foreground="#FF3B143A"/>
-            <ComboBox x:Name="CboCorTexto" Width="135" Height="24" SelectionChanged="CboCorTexto_SelectionChanged">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <!-- Círculo colorido demonstrando a cor -->
-                            <Ellipse Width="14" Height="14" Fill="{Binding Valor}" Margin="0,0,8,0" Stroke="Gray" StrokeThickness="0.5"/>
-                            <TextBlock Text="{Binding Nome}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+            <!-- COLOR PICKER DO TOOLKIT -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0">
+                <TextBlock Text="Cor: " VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#FF3B143A" Margin="0,0,4,0"/>
+
+                <xctk:ColorPicker x:Name="CpTexto" 
+                                  Width="120" 
+                                  Height="24"
+                                  SelectedColor="Black"
+                                  AvailableColorsHeader="Cores Disponíveis"
+                                  StandardColorsHeader="Cores Padrão"
+                                  RecentColorsHeader="Cores Recentes"
+                                  SelectedColorChanged="CpTexto_SelectedColorChanged" />
+            </StackPanel>
 
             <Separator Margin="5,0"/>
 

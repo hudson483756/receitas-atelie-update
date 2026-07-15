@@ -1,0 +1,174 @@
+﻿<Window x:Class="ReceitasAtelie.Views.CadastroReceitaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cadastrar Nova Receita" 
+        Height="700" Width="900"
+        WindowStartupLocation="CenterOwner"
+        Background="#FFF5F5F5">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- 1. Título e Categoria -->
+            <RowDefinition Height="Auto"/>
+            <!-- 2. Barra de Ferramentas de Formatação -->
+            <RowDefinition Height="*"/>
+            <!-- 3. Editor RichTextBox -->
+            <RowDefinition Height="Auto"/>
+            <!-- 4. Anexos Opcionais -->
+            <RowDefinition Height="Auto"/>
+            <!-- 5. Botões de Ação -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. TÍTULO E CATEGORIA -->
+        <Grid Grid.Row="0" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                <TextBlock Text="Título da Receita:" FontWeight="Bold" Foreground="#FF3B143A" Margin="0,0,0,5"/>
+                <TextBox x:Name="TxtTitulo" Padding="8,5" BorderBrush="#FFD47FA6" BorderThickness="1"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Categoria:" FontWeight="Bold" Foreground="#FF3B143A" Margin="0,0,0,5"/>
+                <ComboBox x:Name="CboCategorias" Padding="8,5" BorderBrush="#FFD47FA6" 
+                          DisplayMemberPath="Nome" SelectedValuePath="Id"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 2. BARRA DE FERRAMENTAS DO EDITOR (ESTILO WORD) -->
+        <ToolBar Grid.Row="1" Background="#FFE6D5E3" BorderBrush="#FFD47FA6" BorderThickness="1,1,1,0" ToolBarTray.IsLocked="True">
+
+            <!-- Seletor de Fontes do Sistema -->
+            <ComboBox x:Name="CboFontes" Width="160" Height="24" Margin="2,0"
+                      ItemsSource="{x:Static Fonts.SystemFontFamilies}"
+                      SelectionChanged="CboFontes_SelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Mostra o nome da fonte usando a própria fonte como estilo -->
+                        <TextBlock Text="{Binding Source}" FontFamily="{Binding}" FontSize="13" VerticalAlignment="Center"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <!-- Seletor de Tamanho de Fonte -->
+            <ComboBox x:Name="CboTamanhoFonte" Width="55" Height="24" Margin="2,0" IsEditable="True" SelectionChanged="CboTamanhoFonte_SelectionChanged">
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">8</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">9</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">10</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">11</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">12</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">14</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">16</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">18</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">20</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">22</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">24</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">26</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">28</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">36</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">48</System:Double>
+                <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">72</System:Double>
+            </ComboBox>
+
+            <Separator Margin="5,0"/>
+
+            <!-- Negrito -->
+            <Button Command="EditingCommands.ToggleBold" ToolTip="Negrito (Ctrl+B)" Width="26" Height="24">
+                <TextBlock Text="N" FontWeight="Bold" FontSize="14" TextAlignment="Center"/>
+            </Button>
+            <!-- Itálico -->
+            <Button Command="EditingCommands.ToggleItalic" ToolTip="Itálico (Ctrl+I)" Width="26" Height="24">
+                <TextBlock Text="I" FontStyle="Italic" FontSize="14" TextAlignment="Center"/>
+            </Button>
+            <!-- Sublinhado -->
+            <Button Command="EditingCommands.ToggleUnderline" ToolTip="Sublinhado (Ctrl+U)" Width="26" Height="24">
+                <TextBlock Text="S" TextDecorations="Underline" FontSize="14" TextAlignment="Center"/>
+            </Button>
+
+            <Separator Margin="5,0"/>
+
+            <!-- Paleta de Cores Visual -->
+            <TextBlock Text=" Cor: " VerticalAlignment="Center" FontSize="11" Foreground="#FF3B143A"/>
+            <ComboBox x:Name="CboCorTexto" Width="135" Height="24" SelectionChanged="CboCorTexto_SelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Círculo colorido demonstrando a cor -->
+                            <Ellipse Width="14" Height="14" Fill="{Binding Valor}" Margin="0,0,8,0" Stroke="Gray" StrokeThickness="0.5"/>
+                            <TextBlock Text="{Binding Nome}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <Separator Margin="5,0"/>
+
+            <!-- Alinhamentos -->
+            <Button Command="EditingCommands.AlignLeft" ToolTip="Alinhar à Esquerda" Width="26" Height="24">
+                <TextBlock Text="▤" FontSize="14" TextAlignment="Center"/>
+            </Button>
+            <Button Command="EditingCommands.AlignCenter" ToolTip="Centralizar" Width="26" Height="24">
+                <TextBlock Text="▧" FontSize="14" TextAlignment="Center"/>
+            </Button>
+            <Button Command="EditingCommands.AlignRight" ToolTip="Alinhar à Direita" Width="26" Height="24">
+                <TextBlock Text="▥" FontSize="14" TextAlignment="Center"/>
+            </Button>
+
+        </ToolBar>
+
+        <!-- 3. EDITOR RICHTEXTBOX -->
+        <RichTextBox Grid.Row="2" x:Name="RtbTextoReceita" 
+                     BorderBrush="#FFD47FA6" BorderThickness="1" 
+                     Padding="15" AcceptsTab="True" VerticalScrollBarVisibility="Auto">
+            <FlowDocument>
+                <Paragraph FontSize="14">
+                    Escreva ou cole sua receita aqui...
+                </Paragraph>
+            </FlowDocument>
+        </RichTextBox>
+
+        <!-- 4. ANEXOS OPCIONAIS -->
+        <Grid Grid.Row="3" Margin="0,15,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Arquivo de Apoio -->
+            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                <TextBlock Text="Arquivo de Apoio (Opcional - PDF, Word, etc.):" FontWeight="Bold" Foreground="#FF3B143A" Margin="0,0,0,5"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="TxtCaminhoArquivo" IsReadOnly="True" Padding="8,5" BorderBrush="#FFD47FA6" BorderThickness="1,1,0,1"/>
+                    <Button Grid.Column="1" Content="Buscar..." Click="BtnBuscarArquivo_Click" Padding="15,5" Background="#FFD47FA6" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- Imagem de Capa -->
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Imagem de Capa (Opcional):" FontWeight="Bold" Foreground="#FF3B143A" Margin="0,0,0,5"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="TxtCaminhoImagem" IsReadOnly="True" Padding="8,5" BorderBrush="#FFD47FA6" BorderThickness="1,1,0,1"/>
+                    <Button Grid.Column="1" Content="Buscar..." Click="BtnBuscarImagem_Click" Padding="15,5" Background="#FFD47FA6" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+                </Grid>
+            </StackPanel>
+        </Grid>
+
+        <!-- 5. BOTÕES DE AÇÃO -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+            <Button Content="Cancelar" Click="BtnCancelar_Click" Width="100" Padding="8" Margin="0,0,10,0" Background="#999999" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+            <Button Content="Salvar Receita" Click="BtnSalvar_Click" Width="120" Padding="8" Background="#FF3B143A" Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+        </StackPanel>
+    </Grid>
+</Window>

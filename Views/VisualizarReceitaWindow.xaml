@@ -1,0 +1,272 @@
+﻿<Window
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        x:Class="ReceitasAtelie.Views.VisualizarReceitaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Visualizar Receita" 
+        Height="750" Width="1100"
+        WindowStartupLocation="CenterOwner"
+        Background="#FFF5F5F5">
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <!-- Linha Principal de Conteúdo -->
+            <RowDefinition Height="*"/>
+            <!-- Linha de Botões Inferiores -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <!-- Coluna Esquerda: Mídias, Zoom e Anexos (Estreito) -->
+                <ColumnDefinition Width="380"/>
+                <!-- Divisor -->
+                <ColumnDefinition Width="15"/>
+                <!-- Coluna Direita: Editor de Texto da Receita (Largo) -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ================= COLUNA ESQUERDA ================= -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <!-- Detalhes da Receita (Título/Categoria) -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Visualizador de Imagem com Zoom -->
+                    <RowDefinition Height="*"/>
+                    <!-- Seção de Arquivo Anexo -->
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 1. Detalhes Básicos -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                    <TextBlock Text="Título:" FontWeight="Bold" Foreground="#FF3B143A" Margin="0,0,0,2"/>
+                    <!-- Modo Leitura -->
+                    <TextBlock x:Name="TxtBlockTitulo" Text="Nome da Receita" FontSize="18" FontWeight="Bold" Foreground="Black" Margin="0,0,0,10"/>
+                    <!-- Modo Edição (Invisível por padrão) -->
+                    <TextBox x:Name="TxtBoxTitulo" FontSize="16" Padding="5" BorderBrush="#FFD47FA6" Visibility="Collapsed" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Categoria:" FontWeight="Bold" Foreground="#FF3B143A" Margin="0,0,0,2"/>
+                    <!-- Modo Leitura -->
+                    <TextBlock x:Name="TxtBlockCategoria" Text="Doces" FontSize="14" Foreground="#666666" Margin="0,0,0,10"/>
+                    <!-- Modo Edição (Invisível por padrão) -->
+                    <ComboBox x:Name="CboCategorias" Padding="5" BorderBrush="#FFD47FA6" DisplayMemberPath="Nome" SelectedValuePath="Id" Visibility="Collapsed" Margin="0,0,0,10"/>
+                </StackPanel>
+
+                <!-- 2. Área da Imagem com Zoom Dinâmico -->
+                <GroupBox Grid.Row="1" Header="Imagem de Capa (Use a barra abaixo para Zoom)" BorderBrush="#FFD47FA6" Foreground="#FF3B143A" FontWeight="Bold" Padding="5">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- QUADRO DE VISUALIZAÇÃO: Mantém a imagem presa no tamanho de 280x280 -->
+                        <Border x:Name="BorderQuadro"
+                                Grid.Row="0" 
+                                Width="280" Height="280" 
+                                CornerRadius="10" 
+                                ClipToBounds="True" 
+                                BorderBrush="#FFD47FA6" 
+                                BorderThickness="1"
+                                Background="#FFE6D5E3"
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center">
+
+                            <!-- ScrollViewer com barras ocultas para rolagem durante o zoom -->
+                            <ScrollViewer HorizontalScrollBarVisibility="Hidden" 
+                                          VerticalScrollBarVisibility="Hidden" 
+                                          Focusable="False">
+
+                                <!-- Forçamos o tamanho máximo da imagem a herdar o tamanho do Border para o Stretch="Uniform" funcionar -->
+                                <Image x:Name="ImgCapa" 
+                                       Stretch="Uniform" 
+                                       MaxWidth="{Binding ElementName=BorderQuadro, Path=ActualWidth}"
+                                       MaxHeight="{Binding ElementName=BorderQuadro, Path=ActualHeight}"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       Cursor="Hand"
+                                       RenderTransformOrigin="0.5,0.5"
+                                       MouseLeftButtonDown="ImgCapa_MouseLeftButtonDown">
+
+                                    <!-- O zoom é aplicado via RenderTransform para não estragar a proporção do layout -->
+                                    <Image.RenderTransform>
+                                        <ScaleTransform x:Name="TransformadorZoom" 
+                                                        ScaleX="{Binding ElementName=SldZoom, Path=Value}" 
+                                                        ScaleY="{Binding ElementName=SldZoom, Path=Value}"/>
+                                    </Image.RenderTransform>
+
+                                    <!-- Menu flutuante -->
+                                    <Image.ContextMenu>
+                                        <ContextMenu x:Name="MenuFoto" Background="White" BorderBrush="#FFD47FA6" BorderThickness="1">
+                                            <MenuItem Header="Visualizar Foto Original" Click="MenuVisualizarFoto_Click">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="🔍" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Image.ContextMenu>
+                                </Image>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Controle de Slider do Zoom -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,5">
+                            <TextBlock Text="Zoom: " VerticalAlignment="Center" FontWeight="Normal"/>
+                            <Slider x:Name="SldZoom" Minimum="1" Maximum="4" Value="1" Width="150" TickFrequency="0.1" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ElementName=SldZoom, Path=Value, StringFormat={}{0:F1}x}" Width="40" Margin="10,0,0,0" VerticalAlignment="Center" FontWeight="Normal"/>
+
+                            <!-- Botão de alterar imagem visível apenas no Modo Edição -->
+                            <Button x:Name="BtnAlterarImagem" Content="Alterar Imagem" Click="BtnAlterarImagem_Click" Margin="10,0,0,0" Padding="5,2" Background="#FFD47FA6" Foreground="White" BorderThickness="0" FontWeight="Bold" Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Grid>
+                </GroupBox>
+
+                <!-- 3. Arquivo de Apoio -->
+                <GroupBox Grid.Row="2" Header="Arquivo de Apoio" BorderBrush="#FFD47FA6" Foreground="#FF3B143A" FontWeight="Bold" Margin="0,15,0,0" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Mostra o nome do arquivo atual -->
+                        <TextBlock x:Name="TxtNomeArquivo" Text="Nenhum arquivo anexado" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontWeight="Normal"/>
+
+                        <!-- Modo Edição: Caixa para exibir o caminho e botão de busca (Oculto por padrão) -->
+                        <Grid x:Name="GridEdicaoArquivo" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="TxtCaminhoArquivo" IsReadOnly="True" Padding="5" BorderBrush="#FFD47FA6" Margin="0,0,5,0" FontWeight="Normal"/>
+                            <Button Grid.Column="1" Content="Buscar..." Click="BtnBuscarArquivo_Click" Padding="10,4" Background="#FFD47FA6" Foreground="White" BorderThickness="0"/>
+                        </Grid>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" x:Name="StackAcoesArquivo">
+                            <Button x:Name="BtnAbrirAnexo" Content="Abrir Anexo" Click="BtnAbrirAnexo_Click" Padding="10,5" Background="#FF3B143A" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                        </StackPanel>
+                    </Grid>
+                </GroupBox>
+            </Grid>
+
+            <!-- Separador Vertical -->
+            <GridSplitter Grid.Column="1" Width="1" Background="#FFD47FA6" HorizontalAlignment="Stretch" Focusable="False"/>
+
+            <!-- ================= COLUNA DIREITA ================= -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <!-- Barra de Ferramentas do Editor (Invisível no modo de leitura) -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Campo de Texto (Modo Leitura ou Modo Edição) -->
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Barra de Formatação (Fica visível APENAS em modo Edição) -->
+                <ToolBar Grid.Row="0" x:Name="BarraFormatacao" Background="#FFE6D5E3" BorderBrush="#FFD47FA6" BorderThickness="1,1,1,0" ToolBarTray.IsLocked="True" Visibility="Collapsed">
+                    <!-- Seletores idênticos aos do cadastro para preservar as funções -->
+                    <ComboBox x:Name="CboFontes" Width="150" Height="24" ItemsSource="{x:Static Fonts.SystemFontFamilies}" SelectionChanged="CboFontes_SelectionChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Source}" FontFamily="{Binding}" FontSize="13" VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <ComboBox x:Name="CboTamanhoFonte" Width="55" Height="24" IsEditable="True" SelectionChanged="CboTamanhoFonte_SelectionChanged">
+                        <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">10</System:Double>
+                        <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">12</System:Double>
+                        <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">14</System:Double>
+                        <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">16</System:Double>
+                        <System:Double xmlns:System="clr-namespace:System;assembly=mscorlib">18</System:Double>
+                    </ComboBox>
+                    <Separator Margin="5,0"/>
+                    <Button Command="EditingCommands.ToggleBold" ToolTip="Negrito" Width="26" Height="24">
+                        <TextBlock Text="N" FontWeight="Bold"/>
+                    </Button>
+                    <Button Command="EditingCommands.ToggleItalic" ToolTip="Itálico" Width="26" Height="24">
+                        <TextBlock Text="I" FontStyle="Italic"/>
+                    </Button>
+                    <Button Command="EditingCommands.ToggleUnderline" ToolTip="Sublinhado" Width="26" Height="24">
+                        <TextBlock Text="S" TextDecorations="Underline"/>
+                    </Button>
+
+                    <!-- NOVO: ColorPicker Estilizado e Compacto -->
+                    <Separator Margin="5,0"/>
+                    <TextBlock Text="Cor:" VerticalAlignment="Center" Foreground="#FF3B143A" FontWeight="Bold" Margin="3,0,5,0"/>
+                    <xctk:ColorPicker x:Name="CpCorTexto" 
+                                      Width="55" Height="24"
+                                      SelectedColor="Black"
+                                      DisplayColorAndName="False"
+                                      ShowTabHeaders="False"
+                                      AvailableColorsHeader="Cores Disponíveis"
+                                      StandardColorsHeader="Cores Padrão"
+                                      RecentColorsHeader="Cores Recentes"
+                                      SelectedColorChanged="CpCorTexto_SelectedColorChanged"/>
+                </ToolBar>
+
+                <!-- Campo do Editor de Texto (RichTextBox) -->
+                <!-- No Modo Leitura, IsReadOnly será True. No modo Edição, mudará para False. -->
+                <RichTextBox Grid.Row="1" x:Name="RtbTextoReceita" 
+                             BorderBrush="#FFD47FA6" BorderThickness="1" 
+                             Padding="15" AcceptsTab="True" VerticalScrollBarVisibility="Auto" IsReadOnly="True">
+                    <FlowDocument>
+                        <Paragraph FontSize="14" x:Name="ParagrafoTexto">
+                            Conteúdo da receita carregada...
+                        </Paragraph>
+                    </FlowDocument>
+                </RichTextBox>
+            </Grid>
+        </Grid>
+
+        <!-- ================= BOTÕES INFERIORES DE AÇÃO ================= -->
+        <Grid Grid.Row="1" Margin="0,15,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Botão Voltar (Fecha a tela) -->
+            <Button Grid.Column="0" Content="Voltar para a Lista" Click="BtnVoltar_Click" HorizontalAlignment="Left" Padding="15,8" Background="#999999" Foreground="White" BorderThickness="0" FontWeight="Bold" Cursor="Hand"/>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <!-- Botão Editar / Entrar em Modo Edição -->
+                <Button x:Name="BtnEditar" Content="Editar Receita" Click="BtnEditar_Click" Width="130" Padding="8" Background="#FF3B143A" Foreground="White" BorderThickness="0" FontWeight="Bold" Cursor="Hand"/>
+
+                <!-- Botão Salvar Edição (Visível apenas em Modo Edição) -->
+                <Button x:Name="BtnSalvarEdicao" Content="Salvar Alterações" Click="BtnSalvarEdicao_Click" Width="150" Padding="8" Background="#FFD47FA6" Foreground="White" BorderThickness="0" FontWeight="Bold" Cursor="Hand" Visibility="Collapsed" Margin="10,0,0,0"/>
+
+                <!-- Botão Cancelar Edição (Visível apenas em Modo Edição) -->
+                <Button x:Name="BtnCancelarEdicao" Content="Cancelar" Click="BtnCancelarEdicao_Click" Width="100" Padding="8" Background="#999999" Foreground="White" BorderThickness="0" FontWeight="Bold" Cursor="Hand" Visibility="Collapsed" Margin="10,0,0,0"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- OVERLAY TELA CHEIA -->
+        <Grid x:Name="GridFullscreen" 
+              Grid.Row="0" Grid.RowSpan="2" 
+              Background="#E6000000" 
+              Visibility="Collapsed"
+              MouseDown="GridFullscreen_MouseDown">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Botão Fechar -->
+            <Button Content="Fechar [X]" 
+                    HorizontalAlignment="Right" 
+                    Margin="20" 
+                    Padding="15,8" 
+                    Background="#FFD47FA6" 
+                    Foreground="White" 
+                    BorderThickness="0" 
+                    FontWeight="Bold" 
+                    Cursor="Hand"
+                    Click="BtnFecharFullscreen_Click"/>
+
+            <!-- Imagem em tamanho grande -->
+            <Image x:Name="ImgFullscreen" 
+                   Grid.Row="1" 
+                   Margin="40" 
+                   Stretch="Uniform" 
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+        </Grid>
+    </Grid>
+</Window>

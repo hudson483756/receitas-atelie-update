@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Text;
 using Microsoft.Data.Sqlite;
 using ReceitasAtelie.Data;
 using ReceitasAtelie.Models;
@@ -12,14 +15,21 @@ namespace ReceitasAtelie.ViewModels
     {
         public ObservableCollection<CategoriaNodeViewModel> CategoriasRaiz { get; set; } = new();
 
+        // Propriedade necessária para expor uma lista plana de categorias no ComboBox de edição
+        public ObservableCollection<CategoriaNodeViewModel> Categorias { get; set; } = new();
+
+        public ObservableCollection<Receita> ReceitasExibidas { get; set; } = new();
+
         public MainViewModel()
         {
             CarregarCategorias();
+            CarregarReceitas(); // Carrega todas por padrão ao iniciar o app
         }
 
         public void CarregarCategorias()
         {
             CategoriasRaiz.Clear();
+            Categorias.Clear();
             var todasCategorias = new List<Categoria>();
 
             string connectionString = DatabaseConfig.GetConnectionString();
@@ -44,6 +54,9 @@ namespace ReceitasAtelie.ViewModels
 
             foreach (var nodo in dicionarioNodos.Values)
             {
+                // Popula a lista plana usada em seletores (ex: ComboBox de categorias)
+                Categorias.Add(nodo);
+
                 if (nodo.IdPai == null)
                 {
                     CategoriasRaiz.Add(nodo);
@@ -54,6 +67,7 @@ namespace ReceitasAtelie.ViewModels
                 }
             }
         }
+
 
         public void SalvarCategoria(string nome, int? idPai)
         {
@@ -66,9 +80,9 @@ namespace ReceitasAtelie.ViewModels
                 connection.Open();
 
                 string query = """
-        INSERT INTO Categorias (Nome, IdPai) 
-        VALUES ($nome, $idPai);
-        """;
+                INSERT INTO Categorias (Nome, IdPai) 
+                VALUES ($nome, $idPai);
+                """;
 
                 using var command = new SqliteCommand(query, connection);
                 command.Parameters.AddWithValue("$nome", nome.Trim());
@@ -77,41 +91,32 @@ namespace ReceitasAtelie.ViewModels
                 command.ExecuteNonQuery();
 
                 // --- LÓGICA DE CRIAÇÃO DE PASTAS NO MEUS DOCUMENTOS ---
-                // 1. Caminho base fixo
                 string meusDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                string caminhoBase = System.IO.Path.Combine(meusDocumentos, "MemoriasAtelie", "Fotos", "Receitas");
-
+                string caminhoBase = Path.Combine(meusDocumentos, "MemoriasAtelie", "Fotos", "Receitas");
                 string caminhoFinal;
 
                 if (idPai == null)
                 {
-                    // Categoria Raiz: Documents\MemoriasAtelie\Fotos\Receitas\NomeDaCategoria
-                    caminhoFinal = System.IO.Path.Combine(caminhoBase, nome.Trim());
+                    caminhoFinal = Path.Combine(caminhoBase, nome.Trim());
                 }
                 else
                 {
-                    // Subcategoria: Precisamos descobrir o nome da categoria pai para montar o caminho correto
                     var nodoPai = EncontrarNoPorId(CategoriasRaiz, idPai.Value);
                     if (nodoPai != null)
                     {
-                        // Documents\MemoriasAtelie\Fotos\Receitas\NomeDoPai\NomeDaSubcategoria
-                        caminhoFinal = System.IO.Path.Combine(caminhoBase, nodoPai.Nome, nome.Trim());
+                        caminhoFinal = Path.Combine(caminhoBase, nodoPai.Nome, nome.Trim());
                     }
                     else
                     {
-                        // Caso de segurança se não achar o pai no cache atual
-                        caminhoFinal = System.IO.Path.Combine(caminhoBase, nome.Trim());
+                        caminhoFinal = Path.Combine(caminhoBase, nome.Trim());
                     }
                 }
 
-                // 2. Cria a pasta fisicamente (se já existir, o .NET ignora automaticamente)
-                if (!System.IO.Directory.Exists(caminhoFinal))
+                if (!Directory.Exists(caminhoFinal))
                 {
-                    System.IO.Directory.CreateDirectory(caminhoFinal);
+                    Directory.CreateDirectory(caminhoFinal);
                 }
-                // ------------------------------------------------------
 
-                // Recarrega a árvore do banco atualizada na tela
                 CarregarCategorias();
             }
             catch (Exception ex)
@@ -120,8 +125,66 @@ namespace ReceitasAtelie.ViewModels
             }
         }
 
-        // Método auxiliar necessário para buscar o nome do pai antes do recarregamento completo
-        private CategoriaNodeViewModel EncontrarNoPorId(System.Collections.IEnumerable nodos, int idBuscado)
+        public void CarregarReceitas(int? idCategoriaSelecionada = null)
+        {
+            ReceitasExibidas.Clear();
+
+            try
+            {
+                string connectionString = DatabaseConfig.GetConnectionString();
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+
+                // Se passarmos uma categoria, filtramos por ela. Caso contrário, traz tudo.
+                string query = @"
+            SELECT R.Id, R.IdCategoria, R.Titulo, R.CaminhoTexto, R.CaminhoImagem, R.CaminhoArquivo, C.Nome as CategoriaNome
+            FROM Receitas R
+            INNER JOIN Categorias C ON R.IdCategoria = C.Id";
+
+                if (idCategoriaSelecionada != null)
+                {
+                    query += " WHERE R.IdCategoria = $idCategoria";
+                }
+
+                query += " ORDER BY R.Titulo;";
+
+                using var command = new SqliteCommand(query, connection);
+                if (idCategoriaSelecionada != null)
+                {
+                    command.Parameters.AddWithValue("$idCategoria", idCategoriaSelecionada.Value);
+                }
+
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    // Cria o objeto de modelo
+                    var receita = new Receita
+                    {
+                        Id = reader.GetInt32(0),
+                        CategoriaId = reader.GetInt32(1),
+                        Titulo = reader.GetString(2),
+                        CaminhoTexto = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                        CaminhoImagemCapa = reader.IsDBNull(4) ? null : reader.GetString(4),
+                        CaminhoArquivoApoio = reader.IsDBNull(5) ? null : reader.GetString(5),
+                        CategoriaNome = reader.GetString(6)
+                    };
+
+                    // Carrega o conteúdo RTF para a propriedade TextoFormatado se o arquivo físico existir
+                    if (!string.IsNullOrEmpty(receita.CaminhoTexto) && File.Exists(receita.CaminhoTexto))
+                    {
+                        receita.TextoFormatado = File.ReadAllText(receita.CaminhoTexto, System.Text.Encoding.UTF8);
+                    }
+
+                    ReceitasExibidas.Add(receita);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Erro ao carregar receitas: {ex.Message}", "Erro", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private CategoriaNodeViewModel EncontrarNoPorId(IEnumerable nodos, int idBuscado)
         {
             foreach (CategoriaNodeViewModel nodo in nodos)
             {
@@ -147,29 +210,26 @@ namespace ReceitasAtelie.ViewModels
 
             try
             {
-                // 1. Descobrir o caminho da pasta antes de apagar do banco para sabermos o nome do pai se houver
                 string meusDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                string caminhoBase = System.IO.Path.Combine(meusDocumentos, "MemoriasAtelie", "Fotos", "Receitas");
+                string caminhoBase = Path.Combine(meusDocumentos, "MemoriasAtelie", "Fotos", "Receitas");
                 string caminhoPasta;
 
                 if (nodo.IdPai == null)
                 {
-                    caminhoPasta = System.IO.Path.Combine(caminhoBase, nodo.Nome);
+                    caminhoPasta = Path.Combine(caminhoBase, nodo.Nome);
                 }
                 else
                 {
                     var nodoPai = EncontrarNoPorId(CategoriasRaiz, nodo.IdPai.Value);
                     caminhoPasta = nodoPai != null
-                        ? System.IO.Path.Combine(caminhoBase, nodoPai.Nome, nodo.Nome)
-                        : System.IO.Path.Combine(caminhoBase, nodo.Nome);
+                        ? Path.Combine(caminhoBase, nodoPai.Nome, nodo.Nome)
+                        : Path.Combine(caminhoBase, nodo.Nome);
                 }
 
-                // 2. Apagar do Banco de Dados SQLite
                 string connectionString = DatabaseConfig.GetConnectionString();
                 using var connection = new SqliteConnection(connectionString);
                 connection.Open();
 
-                // O PRAGMA garante que o SQLite respeite a chave estrangeira e execute o CASCADE
                 using (var pragmaCmd = new SqliteCommand("PRAGMA foreign_keys = ON;", connection))
                 {
                     pragmaCmd.ExecuteNonQuery();
@@ -180,13 +240,11 @@ namespace ReceitasAtelie.ViewModels
                 command.Parameters.AddWithValue("$id", nodo.Id);
                 command.ExecuteNonQuery();
 
-                // 3. Apagar a pasta física no Windows (e tudo dentro dela)
-                if (System.IO.Directory.Exists(caminhoPasta))
+                if (Directory.Exists(caminhoPasta))
                 {
-                    System.IO.Directory.Delete(caminhoPasta, true); // true força a exclusão recursiva de subpastas e arquivos
+                    Directory.Delete(caminhoPasta, true);
                 }
 
-                // 4. Atualiza a árvore na tela
                 CarregarCategorias();
             }
             catch (Exception ex)
@@ -195,5 +253,176 @@ namespace ReceitasAtelie.ViewModels
             }
         }
 
+        public bool SalvarReceita(string titulo, int idCategoria, string rtfConteudo, string caminhoOriginalAnexo, string caminhoOriginalImagem)
+        {
+            try
+            {
+                var categoria = EncontrarNoPorId(CategoriasRaiz, idCategoria);
+                if (categoria == null)
+                {
+                    System.Windows.MessageBox.Show("Categoria não encontrada no sistema.", "Erro", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return false;
+                }
+
+                string meusDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                string caminhoBase = Path.Combine(meusDocumentos, "MemoriasAtelie", "Fotos", "Receitas");
+                string caminhoPastaCategoria;
+
+                if (categoria.IdPai == null)
+                {
+                    caminhoPastaCategoria = Path.Combine(caminhoBase, categoria.Nome);
+                }
+                else
+                {
+                    var nodoPai = EncontrarNoPorId(CategoriasRaiz, categoria.IdPai.Value);
+                    caminhoPastaCategoria = nodoPai != null
+                        ? Path.Combine(caminhoBase, nodoPai.Nome, categoria.Nome)
+                        : Path.Combine(caminhoBase, categoria.Nome);
+                }
+
+                string nomePastaReceita = string.Concat(titulo.Split(Path.GetInvalidFileNameChars())).Trim();
+                string caminhoPastaReceita = Path.Combine(caminhoPastaCategoria, nomePastaReceita);
+
+                if (!Directory.Exists(caminhoPastaReceita))
+                {
+                    Directory.CreateDirectory(caminhoPastaReceita);
+                }
+
+                string caminhoFinalTexto = Path.Combine(caminhoPastaReceita, $"{nomePastaReceita}.rtf");
+                File.WriteAllText(caminhoFinalTexto, rtfConteudo, Encoding.UTF8);
+
+                string? caminhoFinalImagem = null;
+                if (!string.IsNullOrWhiteSpace(caminhoOriginalImagem) && File.Exists(caminhoOriginalImagem))
+                {
+                    string extensao = Path.GetExtension(caminhoOriginalImagem);
+                    caminhoFinalImagem = Path.Combine(caminhoPastaReceita, $"capa{extensao}");
+                    File.Copy(caminhoOriginalImagem, caminhoFinalImagem, true);
+                }
+
+                string? caminhoFinalAnexo = null;
+                if (!string.IsNullOrWhiteSpace(caminhoOriginalAnexo) && File.Exists(caminhoOriginalAnexo))
+                {
+                    string nomeArquivoOriginal = Path.GetFileName(caminhoOriginalAnexo);
+                    caminhoFinalAnexo = Path.Combine(caminhoPastaReceita, nomeArquivoOriginal);
+                    File.Copy(caminhoOriginalAnexo, caminhoFinalAnexo, true);
+                }
+
+                string connectionString = DatabaseConfig.GetConnectionString();
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+
+                string query = """
+                INSERT INTO Receitas (IdCategoria, Titulo, CaminhoTexto, CaminhoImagem, CaminhoArquivo, DataCadastro)
+                VALUES ($idCategoria, $titulo, $caminhoTexto, $caminhoImagem, $caminhoArquivo, $data);
+                """;
+
+                using var command = new SqliteCommand(query, connection);
+                command.Parameters.AddWithValue("$idCategoria", idCategoria);
+                command.Parameters.AddWithValue("$titulo", titulo);
+                command.Parameters.AddWithValue("$caminhoTexto", caminhoFinalTexto);
+                command.Parameters.AddWithValue("$caminhoImagem", (object?)caminhoFinalImagem ?? DBNull.Value);
+                command.Parameters.AddWithValue("$caminhoArquivo", (object?)caminhoFinalAnexo ?? DBNull.Value);
+                command.Parameters.AddWithValue("$data", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+
+                command.ExecuteNonQuery();
+
+                System.Windows.MessageBox.Show("Receita cadastrada e arquivos salvos com sucesso!", "Sucesso", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Erro ao salvar a receita fisicamente: {ex.Message}", "Erro", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        // --- NOVO MÉTODO IMPLEMENTADO PARA EDITAR E SALVAR ALTERAÇÕES ---
+        public bool SalvarAlteracoesReceita(Receita receita)
+        {
+            try
+            {
+                // 1. Localiza a pasta física antiga da receita usando o caminho salvo no banco
+                string caminhoTextoAntigo = GetCaminhoTextoDoBanco(receita.Id);
+                string pastaReceita = !string.IsNullOrEmpty(caminhoTextoAntigo)
+                    ? Path.GetDirectoryName(caminhoTextoAntigo)
+                    : string.Empty;
+
+                // Caso não localize pelo banco, tenta estruturar com base na categoria atual selecionada
+                if (string.IsNullOrEmpty(pastaReceita) || !Directory.Exists(pastaReceita))
+                {
+                    var categoria = EncontrarNoPorId(CategoriasRaiz, receita.CategoriaId);
+                    if (categoria != null)
+                    {
+                        string meusDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                        string caminhoBase = Path.Combine(meusDocumentos, "MemoriasAtelie", "Fotos", "Receitas");
+                        string caminhoCategoria = categoria.IdPai == null
+                            ? Path.Combine(caminhoBase, categoria.Nome)
+                            : Path.Combine(caminhoBase, EncontrarNoPorId(CategoriasRaiz, categoria.IdPai.Value)?.Nome ?? "", categoria.Nome);
+
+                        string nomePastaClean = string.Concat(receita.Titulo.Split(Path.GetInvalidFileNameChars())).Trim();
+                        pastaReceita = Path.Combine(caminhoCategoria, nomePastaClean);
+                        Directory.CreateDirectory(pastaReceita);
+                    }
+                }
+
+                // 2. Atualiza fisicamente o arquivo .rtf com o novo texto formatado
+                string nomePastaOriginal = Path.GetFileName(pastaReceita);
+                string caminhoFinalTexto = Path.Combine(pastaReceita, $"{nomePastaOriginal}.rtf");
+                File.WriteAllText(caminhoFinalTexto, receita.TextoFormatado, Encoding.UTF8);
+
+                // 3. Atualiza os dados no banco de dados SQLite
+                string connectionString = DatabaseConfig.GetConnectionString();
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+
+                string query = """
+                UPDATE Receitas 
+                SET IdCategoria = $idCategoria, 
+                    Titulo = $titulo, 
+                    CaminhoTexto = $caminhoTexto, 
+                    CaminhoImagem = $caminhoImagem, 
+                    CaminhoArquivo = $caminhoArquivo
+                WHERE Id = $id;
+                """;
+
+                using var command = new SqliteCommand(query, connection);
+                command.Parameters.AddWithValue("$idCategoria", receita.CategoriaId);
+                command.Parameters.AddWithValue("$titulo", receita.Titulo);
+                command.Parameters.AddWithValue("$caminhoTexto", caminhoFinalTexto);
+                command.Parameters.AddWithValue("$caminhoImagem", (object?)receita.CaminhoImagemCapa ?? DBNull.Value);
+                command.Parameters.AddWithValue("$caminhoArquivo", (object?)receita.CaminhoArquivoApoio ?? DBNull.Value);
+                command.Parameters.AddWithValue("$id", receita.Id);
+
+                command.ExecuteNonQuery();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Erro ao atualizar receita no banco/disco: {ex.Message}", "Erro", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        // Busca o caminho de texto gravado anteriormente no banco para sabermos onde atualizar o .rtf
+        private string GetCaminhoTextoDoBanco(int receitaId)
+        {
+            try
+            {
+                string connectionString = DatabaseConfig.GetConnectionString();
+                using var connection = new SqliteConnection(connectionString);
+                connection.Open();
+
+                string query = "SELECT CaminhoTexto FROM Receitas WHERE Id = $id;";
+                using var command = new SqliteCommand(query, connection);
+                command.Parameters.AddWithValue("$id", receitaId);
+
+                var result = command.ExecuteScalar();
+                return result != null ? result.ToString() : string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
     }
 }

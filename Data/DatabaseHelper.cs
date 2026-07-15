@@ -20,17 +20,19 @@ namespace ReceitasAtelie.Data
                 );
                 """;
 
+            // Script para criar a tabela de Receitas (Grid)
             string queryReceitas = """
-                CREATE TABLE IF NOT EXISTS Receitas (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    IdCategoria INTEGER NOT NULL,
-                    Titulo TEXT NOT NULL,
-                    CaminhoImagem TEXT,
-                    CaminhoArquivo TEXT,
-                    DataCadastro TEXT NOT NULL,
-                    FOREIGN KEY (IdCategoria) REFERENCES Categorias (Id) ON DELETE CASCADE
-                );
-                """;
+            CREATE TABLE IF NOT EXISTS Receitas (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                IdCategoria INTEGER NOT NULL,
+                Titulo TEXT NOT NULL,
+                CaminhoTexto TEXT, -- Guardará o caminho do arquivo .rtf
+                CaminhoImagem TEXT,
+                CaminhoArquivo TEXT,
+                DataCadastro TEXT NOT NULL,
+                FOREIGN KEY (IdCategoria) REFERENCES Categorias (Id) ON DELETE CASCADE
+            );
+            """;
 
             using (var command = new SqliteCommand(queryCategorias, connection))
             {
